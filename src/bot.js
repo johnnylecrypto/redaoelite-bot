@@ -60,7 +60,7 @@ bot.command("wallet", async (ctx) => {
         user.username = username || "";
         await user.save();
         ctx.reply(
-          `Your wallet information has been updated. Please sign a message at the following link: https://your-signing-website.com/?wallet=${walletAddress}\nAfter signing, use /check <Signature> to verify.`
+          `Your wallet information has been updated. Please sign a message at the following link: https://redaoelite-ygmv.vercel.app/\nAfter signing, use /check <Signature> to verify.`
         );
       } else {
         ctx.reply(
@@ -75,11 +75,10 @@ bot.command("wallet", async (ctx) => {
         username: username || "",
         chatId: chatId,
         signature: "",
-        g,
       });
       await user.save();
       ctx.reply(
-        `Your wallet has been registered successfully. Please sign a message at the following link: https://your-signing-website.com/?wallet=${walletAddress}\nAfter signing, use /check <Signature> to verify.`
+        `Your wallet has been registered successfully. Please sign a message at the following link: https://redaoelite-ygmv.vercel.app/\nAfter signing, use /check <Signature> to verify.`
       );
     }
   } catch (error) {
