@@ -41,6 +41,8 @@ bot.command("wallet", async (ctx) => {
   const { first_name, last_name, username } = ctx.from;
   const chatId = ctx.chat.id.toString();
 
+  console.log("chatId", chatId);
+
   try {
     let existingUser = await User.findOne({ wallet: walletAddress });
 
