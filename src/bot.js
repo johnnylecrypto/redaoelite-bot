@@ -23,7 +23,7 @@ const CHANNEL_ID = process.env.CHANNEL_ID;
 
 bot.start((ctx) => {
   ctx.reply(
-    "Welcome to the NFT Checker Bot!\nPlease sign your wallet and copy the signature at the following link: https://redaoelite-ygmv.vercel.app/\nUse /sign <your-signature> to verify your wallet."
+    "Welcome to the NFT Checker Bot!\nPlease sign your wallet and copy the signature at the following link: redaoelite.vercel.app//\nUse /sign <your-signature> to verify your wallet."
   );
 });
 
