@@ -23,124 +23,67 @@ const CHANNEL_ID = process.env.CHANNEL_ID;
 
 bot.start((ctx) => {
   ctx.reply(
-    "Welcome to the NFT Checker Bot!\nUse /wallet <your-ethereum-wallet-address> to register."
+    "Welcome to the NFT Checker Bot!\nPlease sign your wallet and copy the signature at the following link: https://redaoelite-ygmv.vercel.app/\nUse /sign <your-signature> to verify your wallet."
   );
 });
 
-// Command /wallet to input the wallet address
-bot.command("wallet", async (ctx) => {
-  const args = ctx.message.text.split(" ").slice(1);
-  const walletAddress = args[0];
-
-  if (!walletAddress || !ethers.utils.isAddress(walletAddress)) {
-    return ctx.reply(
-      "Invalid or missing wallet address. Usage: /wallet <your-ethereum-wallet-address>"
-    );
-  }
-
-  const { first_name, last_name, username } = ctx.from;
-  const chatId = ctx.chat.id.toString();
-
-  console.log("chatId", chatId);
-
-  try {
-    let existingUser = await User.findOne({ wallet: walletAddress });
-
-    if (existingUser && existingUser.chatId !== chatId) {
-      return ctx.reply(
-        "This wallet address is already registered by another user. Please use a different wallet."
-      );
-    }
-
-    let user = await User.findOne({ chatId: chatId });
-
-    if (user) {
-      if (!user.signature) {
-        user.wallet = walletAddress;
-        user.firstName = first_name || "";
-        user.lastName = last_name || "";
-        user.username = username || "";
-        await user.save();
-        ctx.reply(
-          `Your wallet information has been updated. Please sign a message at the following link: https://redaoelite-ygmv.vercel.app/\nAfter signing, use /check <Signature> to verify.`
-        );
-      } else {
-        ctx.reply(
-          "You have already registered a wallet and signed. You cannot update your wallet address."
-        );
-      }
-    } else {
-      user = new User({
-        wallet: walletAddress,
-        firstName: first_name || "",
-        lastName: last_name || "",
-        username: username || "",
-        chatId: chatId,
-        signature: "",
-      });
-      await user.save();
-      ctx.reply(
-        `Your wallet has been registered successfully. Please sign a message at the following link: https://redaoelite-ygmv.vercel.app/\nAfter signing, use /check <Signature> to verify.`
-      );
-    }
-  } catch (error) {
-    console.error("Error saving user to database:", error);
-    ctx.reply(
-      "An error occurred while registering your wallet. Please try again later."
-    );
-  }
-});
-
-bot.command("check", async (ctx) => {
+bot.command("sign", async (ctx) => {
   const args = ctx.message.text.split(" ").slice(1);
   const userSignature = args[0];
 
   if (!userSignature) {
     return ctx.reply(
-      "Invalid or missing signature. Please use: /check <Signature>"
+      "Invalid or missing signature. Please use: /sign <your-signature>"
     );
   }
 
   try {
-    const user = await User.findOne({ chatId: ctx.chat.id });
+    const { id, first_name, last_name, username } = ctx.from;
+    const message = "Hi, I,m reDao Elite NFT holder";
 
-    if (!user) {
-      return ctx.reply(
-        "You have not registered a wallet. Please use /wallet <your-ethereum-wallet-address> to register."
-      );
+    const recoveredAddress = ethers.utils.verifyMessage(message, userSignature);
+
+    const isHolder = await checkNFTHolder(recoveredAddress);
+
+    if (!isHolder) {
+      return ctx.reply("Sorry, you are not an NFT holder.");
     }
 
-    const walletAddress = user.wallet;
+    const existingUser = await User.findOne({ wallet: recoveredAddress });
+    console.log(existingUser);
+    console.log("id", id);
 
-    const recoveredAddress = ethers.utils.verifyMessage(
-      walletAddress.toLowerCase(),
-      userSignature
+    if (existingUser) {
+      if (existingUser.userId === id) {
+        return ctx.reply(
+          `You have already been successfully verified with the wallet: ${existingUser.wallet}.`
+        );
+      } else {
+        return ctx.reply(
+          "This signature has already been registered. Please try a different wallet."
+        );
+      }
+    }
+
+    const newUser = new User({
+      wallet: recoveredAddress,
+      firstName: first_name || "",
+      lastName: last_name || "",
+      username: username || "",
+      userId: id,
+      signature: userSignature,
+    });
+
+    await newUser.save();
+
+    const inviteLink = "https://t.me/+rZLfcvNxiHg4YmNl";
+    await ctx.reply(
+      `Congratulations! You are an NFT holder and your wallet has been registered. You can now join the channel.\n\n\n Here is the invite link: ${inviteLink}`
     );
-
-    console.log("walletAddress", walletAddress);
-    console.log("recoveredAddress", recoveredAddress);
-
-    if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-      return ctx.reply("The signature does not match the wallet address.");
-    }
-
-    const isHolder = await checkNFTHolder(walletAddress);
-
-    if (isHolder) {
-      user.signature = userSignature;
-      await user.save();
-
-      const inviteLink = "https://t.me/+rZLfcvNxiHg4YmNl";
-      await ctx.reply(
-        `Congratulations! You are an NFT holder.\nHere is the invite link to join the channel: ${inviteLink}`
-      );
-    } else {
-      await ctx.reply("Sorry, you are not an NFT holder.");
-    }
   } catch (error) {
-    console.error("Error processing /check command:", error);
+    console.error("Error processing /sign command:", error);
     ctx.reply(
-      "An error occurred during the check process. Please try again later."
+      "An error occurred during the signature verification process. Please try again later."
     );
   }
 });
@@ -149,7 +92,7 @@ bot.on("chat_join_request", async (ctx) => {
   const userId = ctx.from.id;
 
   try {
-    const user = await User.findOne({ chatId: userId });
+    const user = await User.findOne({ userId: userId });
 
     if (user?.signature) {
       await ctx.telegram.approveChatJoinRequest(CHANNEL_ID, userId);

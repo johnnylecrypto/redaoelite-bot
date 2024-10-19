@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema(
     lastName: { type: String },
     username: { type: String },
     signature: { type: String },
-    chatId: { type: String, required: true },
+    userId: { type: Number, required: true },
   },
   { timestamps: true }
 );
